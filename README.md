@@ -242,7 +242,7 @@ If you use Virtex in your research, feel free to cite it!
   year = {2021},
   publisher = {GitHub},
   journal = {GitHub repository},
-  howpublished = {\url{https://github.com/chrislarson1/virtex}},
+  howpublished = {\url{https://github.com/virtexlabs/virtex}},
   commit = {}
 }
 ```
