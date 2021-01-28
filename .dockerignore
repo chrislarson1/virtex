@@ -1,0 +1,16 @@
+data/
+docs/
+examples/
+tests/
+requirements_examples.txt
+requirements_tests.txt
+.local/
+.github/
+*.egg-info/
+*__pycache__/
+*.pytest_cache/
+BUILD.sh
+*Dockerfile*
+*.DS_Store
+*.Rhistory
+*.idea/

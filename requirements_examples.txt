@@ -1,0 +1,6 @@
+keras==2.4.3
+transformers>=4.1.1
+bert-serving-server
+bert-serving-client
+seaborn
+matplotlib
