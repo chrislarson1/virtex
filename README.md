@@ -18,7 +18,7 @@ Virtex is a ML serving framework for running inference on GPUs in poduction.
 ### Design principles
 
 ##### Philosophy
-- Flexibility: Python native serving implementation with no restrictions on application, model, implementation, deep learning framework etc.
+- Flexibility: Python native serving implementation no vendor lock-in. Use your packages of choice.
 - Shared-nothing: Performant serving implementation on an event loop, offload expensive compute to an accelerator. No interprocess communication!
 
 ##### Implementation
@@ -52,7 +52,7 @@ $ pip install virtex
 ```bash
 $ git clone https://github.com/virtexlabs/virtex-python.git && cd virtex
 $ pip install -r requirements.txt --user
-$ pip install . --user
+$ python setup.py install
 ```
 
 ### Framework
