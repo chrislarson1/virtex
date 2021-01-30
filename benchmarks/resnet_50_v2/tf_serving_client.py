@@ -60,7 +60,7 @@ if __name__ == '__main__':
     images = [json.dumps({"instances": [
         {"b64": jpeg_bytes} for _ in range(M)]}) for _ in range(N // M)]
 
-    # Run examples
+    # Run benchmarks
     loop = asyncio.get_event_loop()
     t = time.time()
     loop.run_until_complete(asyncio.ensure_future(post_bundle(SERVER_URL, images)))

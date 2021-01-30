@@ -87,7 +87,7 @@ class BertComputation(RequestHandler):
 server = HttpServer(
     name='bert_embedding_service',
     handler=BertComputation(),
-    max_batch_size=64,
+    max_batch_size=128,
     max_time_on_queue=0.01,
     metrics_host='http://0.0.0.0',
     metrics_port=9091,
