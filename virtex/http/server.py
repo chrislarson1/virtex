@@ -27,7 +27,7 @@ from virtex.http.message import HttpMessage
 from virtex.inference import RequestHandler
 
 
-__all__ = ['HttpServer']
+__all__ = ['http_server']
 
 
 async def read_body(receive):
@@ -55,67 +55,21 @@ def make_body(response):
             'body': response.json}
 
 
-class HttpServer(VirtexStateMachine):
+async def _send(send, status, response):
+    await send(make_header(status))
+    await send(make_body(response))
 
-    """
-    Virtex HTTP Server
-    """
 
-    def __init__(self,
-                 name : str,
-                 handler : RequestHandler,
-                 max_batch_size : int = 512,
-                 max_time_on_queue : float = 0.005,
-                 metrics_host : str = '127.0.0.1',
-                 metrics_port : int = 9090,
-                 metrics_mode : Literal['push', 'scrape'] = 'scrape',
-                 metrics_interval : float = 0.01,
-                 max_conn : int = 10000):
-        """
-        Parameters
-        ----------
-        name : ``str``
-            Service name
-        handler: RequestHandler
-            Wrapper for server-side computation
-        max_batch_size : ``Optional[int]``
-            Maximum batch size
-        max_time_on_queue : ``Optional[float]``
-            Maximum time that items spend on processing
-            queue (seconds). Can be fractional.
-        metrics_host: ``str``
-        metrics_port: ``int``
-        metrics_mode: ``str``
-        metrics_interval: ``float``
-        max_conn: ``int``
-            Max number of concurrent server connections
-        """
-        super().__init__(
-            name=name,
-            handler=handler,
-            max_batch_size=max_batch_size,
-            max_time_on_queue=max_time_on_queue,
-            metrics_host=metrics_host,
-            metrics_port=metrics_port,
-            metrics_mode=metrics_mode,
-            metrics_interval=metrics_interval
-        )
-        self.__name = name
-        self.__max_conn = max_conn
+def app(state_machine: VirtexStateMachine):
 
-    @property
-    def app(self):
-
-        async def _send(send, status, response):
-            await send(make_header(status))
-            await send(make_body(response))
-
-        @profile(self._metrics_client.observe,
+    def _app():
+        """ASGI3 compliant wrapper"""
+        @profile(state_machine.metrics_client.observe,
                  'server_latency',
                  tstamp_fn=lambda t0, t1: t1 - t0,
-                 loop=self.loop)
-        async def handler(scope, receive, send):
-            self._check_running()
+                 loop=state_machine.loop)
+        async def request_handler(scope, receive, send):
+            state_machine.check_running()
             if scope['type'] != 'http':
                 await _send(send, 403, HttpMessage(
                     error="This endpoint accepts http requests."))
@@ -132,8 +86,8 @@ class HttpServer(VirtexStateMachine):
                 tasks = []
                 for item in request.data:
                     task = Task(item=item)
-                    self._input_queue.put(task)
-                    tasks.append(self._poll_output_queue(task.key))
+                    state_machine.input_queue.put(task)
+                    tasks.append(state_machine.poll_output_queue(task.key))
                 await _send(send, 200, HttpMessage(
                     data=await asyncio.gather(*tasks)))
                 return
@@ -142,4 +96,43 @@ class HttpServer(VirtexStateMachine):
                 LOGGER.exception(msg=msg)
                 await _send(send, 500, HttpMessage(error=msg))
 
-        return handler
+        return request_handler
+
+    return _app
+
+
+def http_server(name: str,
+                handler: RequestHandler,
+                max_batch_size: int = 512,
+                max_time_on_queue: float = 0.005,
+                metrics_host: str = '127.0.0.1',
+                metrics_port: int = 9090,
+                metrics_mode: Literal['push', 'scrape'] = 'push',
+                metrics_interval: float = 0.01):
+    """
+    Returns a web server that implements the computation handler
+
+    Parameters
+    ----------
+    name : ``str``
+        Service name
+    handler: RequestHandler
+        Wrapper for server-side computation
+    max_batch_size : ``Optional[int]``
+        Maximum batch size
+    max_time_on_queue : ``Optional[float]``
+        Maximum time that items spend on processing
+        queue (seconds). Can be fractional.
+    metrics_host: ``str``
+    metrics_port: ``int``
+    metrics_mode: ``str``
+    metrics_interval: ``float``
+    """
+    return app(VirtexStateMachine(name,
+                                  handler,
+                                  max_batch_size,
+                                  max_time_on_queue,
+                                  metrics_host,
+                                  metrics_port,
+                                  metrics_mode,
+                                  metrics_interval))

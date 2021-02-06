@@ -1,9 +1,3 @@
-data/
-docs/
-examples/
-tests/
-requirements_examples.txt
-requirements_tests.txt
 .local/
 .github/
 *.egg-info/

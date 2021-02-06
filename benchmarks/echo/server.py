@@ -13,8 +13,14 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 # -------------------------------------------------------------------
+import os
 
-from virtex import HttpServer, RequestHandler
+from virtex import http_server, RequestHandler
+
+
+max_batch_size = int(os.getenv('MAX_BATCH_SIZE', 512))
+max_time_on_queue = float(os.getenv('MAX_TIME_ON_QUEUE', 0.01))
+metrics_interval = float(os.getenv('METRICS_INTERVAL', 0.005))
 
 
 class EchoServer(RequestHandler):
@@ -29,15 +35,13 @@ class EchoServer(RequestHandler):
         return model_output_item
 
 
-server = HttpServer(
+app = http_server(
     name='bert_embedding_service',
     handler=EchoServer(),
-    max_batch_size=512,
-    max_time_on_queue=0.01,
+    max_batch_size=max_batch_size,
+    max_time_on_queue=max_time_on_queue,
     metrics_host='http://0.0.0.0',
     metrics_port=9091,
-    metrics_mode='scrape',
-    metrics_interval=0.1
+    metrics_mode='push',
+    metrics_interval=metrics_interval
 )
-
-app = server.app

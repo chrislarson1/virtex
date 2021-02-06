@@ -13,13 +13,20 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 # -------------------------------------------------------------------
+import os
 
 import torch
 from transformers.models.bert import BertModel
 from transformers.models.bert import BertTokenizer
 
-from virtex import RequestHandler, HttpServer
+from virtex import RequestHandler, http_server
 from virtex.serial import encode_pickle
+
+
+max_batch_size = int(os.getenv('MAX_BATCH_SIZE', 128))
+max_seq_len = int(os.getenv('MAX_SEQUENCE_LENGTH', 12))
+max_time_on_queue = float(os.getenv('MAX_TIME_ON_QUEUE', 0.01))
+metrics_interval = float(os.getenv('METRICS_INTERVAL', 0.005))
 
 
 class BertComputation(RequestHandler):
@@ -29,7 +36,6 @@ class BertComputation(RequestHandler):
     """
 
     enable_cuda = True if torch.cuda.is_available() else False
-    max_seq_len = 12
     CLS = '[CLS]'
     SEP = '[SEP]'
     MSK = '[MASK]'
@@ -47,8 +53,8 @@ class BertComputation(RequestHandler):
         for txt in data:
             utt = txt.strip().lower()
             toks = self.tokenizer.tokenize(utt)
-            if len(toks) > self.max_seq_len - 2:
-                toks = toks[:self.max_seq_len - 2]
+            if len(toks) > max_seq_len - 2:
+                toks = toks[:max_seq_len - 2]
             toks.insert(0, self.CLS)
             toks.insert(-1, self.SEP)
             seq_len = max(len(toks), seq_len)
@@ -84,16 +90,13 @@ class BertComputation(RequestHandler):
 
 
 # Embed the computation into a Virtex http server
-server = HttpServer(
+app = http_server(
     name='bert_embedding_service',
     handler=BertComputation(),
-    max_batch_size=128,
-    max_time_on_queue=0.01,
+    max_batch_size=max_batch_size,
+    max_time_on_queue=max_time_on_queue,
     metrics_host='http://0.0.0.0',
     metrics_port=9091,
     metrics_mode='push',
-    metrics_interval=0.01
+    metrics_interval=metrics_interval
 )
-
-# Expose the underlying uvicorn server to the Uvicorn ASGI
-app = server.app

@@ -20,4 +20,10 @@ __all__ = ['VirtexWorker']
 
 
 class VirtexWorker(UvicornWorker):
-    CONFIG_KWARGS = {"loop": "uvloop", "http": "httptools"}
+    CONFIG_KWARGS = {"loop": "uvloop",
+                     "http": "httptools",
+                     "lifespan": "off",
+                     "interface": "asgi3",
+                     "limit_concurrency": 10000,
+                     "limit_max_requests": 10000,
+                     "factory": True}

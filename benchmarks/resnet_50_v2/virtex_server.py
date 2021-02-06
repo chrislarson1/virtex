@@ -16,74 +16,82 @@
 
 import os
 
-import numpy as np
 from PIL import Image
-import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
-from keras.applications import resnet_v2
-from keras.applications import resnet50
-from keras_preprocessing import image
+import torch
+from torchvision.models import resnet50
+from torchvision import transforms
 
 from virtex import RequestHandler, \
-    HttpServer, HttpMessage
-from virtex.serial import encode_bytes, \
-    decode_pil_from_bytes, encode_pickle
+    http_server, HttpMessage
+from virtex.serial import encode_bytes, encode_pickle, \
+    decode_pil_from_bytes
+
+
+max_batch_size = int(os.getenv('MAX_BATCH_SIZE', 56))
+max_time_on_queue = float(os.getenv('MAX_TIME_ON_QUEUE', 0.01))
+metrics_interval = float(os.getenv('METRICS_INTERVAL', 0.005))
 
 
 # Build ResNet50 request handler
-class ResnetComputation(RequestHandler):
+class Resnet50Computation(RequestHandler):
 
-    def __init__(self):
-        self.model = resnet_v2.ResNet50V2(weights='imagenet')
+    enable_cuda = True if torch.cuda.is_available() else False
+    model = resnet50()
+    model.cuda(torch.device('cuda'))
+    model.eval()
+    transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225]
+        )])
 
     def process_request(self, data):
+        imgs = []
         for i, item in enumerate(data):
             img = decode_pil_from_bytes(item)
             img = img.convert('RGB')
             img = img.resize((224, 224), Image.NEAREST)
-            data[i] = resnet50.preprocess_input(image.img_to_array(img))
-        data = np.stack(data, axis=0)
+            imgs.append(self.transform(img))
+        data = torch.stack(imgs, dim=0)
         return data
 
     def run_inference(self, model_input):
-        return self.model.predict(model_input)
+        if self.enable_cuda:
+            model_input = model_input.to('cuda')
+        return self.model(model_input)
 
     def process_response(self, model_output_item):
-        return encode_pickle(model_output_item)
-
-resnet_request_handler = ResnetComputation()
-
+        return encode_pickle(
+            model_output_item.cpu().detach().numpy())
 
 # Create http test messages
 path = os.path.dirname(os.path.abspath(__file__))
-img = open(os.path.join(
+image = open(os.path.join(
     path, "../../data/tiny-imagenet-200/test/images/test_0.JPEG"
 ), 'rb').read()
 
-max_batch_size = 128
-
-message1 = HttpMessage(data=[img])
+message1 = HttpMessage(data=[image])
 message1.encode(encode_bytes)
-
-message2 = HttpMessage(data=[img for _ in range(max_batch_size)])
+message2 = HttpMessage(data=[image for _ in range(max_batch_size)])
 message2.encode(encode_bytes)
 
-
 # Validate the handler can process the message
-response1 = resnet_request_handler.validate(message1)
-response2 = resnet_request_handler.validate(message2)
+resnet_request_handler = Resnet50Computation()
+assert resnet_request_handler.validate(message1)
+assert resnet_request_handler.validate(message2)
 
 
 # Create an http server
-server = HttpServer(
+app = http_server(
     name='resnet_50_v2_image_classification_service',
-    handler=ResnetComputation(),
-    max_batch_size=128,
-    max_time_on_queue=0.01,
+    handler=Resnet50Computation(),
+    max_batch_size=max_batch_size,
+    max_time_on_queue=max_time_on_queue,
     metrics_host='http://0.0.0.0',
-    metrics_port=9090,
+    metrics_port=9091,
     metrics_mode='push',
-    metrics_interval=0.005
+    metrics_interval=metrics_interval
 )
-
-app = server.app

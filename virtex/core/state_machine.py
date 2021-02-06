@@ -37,14 +37,14 @@ class VirtexStateMachine(EventLoopContext):
     """
 
     def __init__(self,
-                 name : str,
-                 handler : RequestHandler,
-                 max_batch_size : int,
-                 max_time_on_queue : float,
-                 metrics_host : str,
-                 metrics_port : int,
-                 metrics_mode : Literal['push', 'scrape'],
-                 metrics_interval : float):
+                 name: str,
+                 handler: RequestHandler,
+                 max_batch_size: int,
+                 max_time_on_queue: float,
+                 metrics_host: str,
+                 metrics_port: int,
+                 metrics_mode: Literal['push', 'scrape'],
+                 metrics_interval: float):
         """
         Parameters
         ----------
@@ -70,10 +70,10 @@ class VirtexStateMachine(EventLoopContext):
         super().__init__()
         self._max_batch_size = max_batch_size
         self._max_time_on_queue = max_time_on_queue
-        self._handler = handler
-        self._input_queue = RequestQueue(max_batch_size)
-        self._output_queue = ResponseQueue()
-        self._metrics_client = PROM_CLIENT_REGISTER[metrics_mode](
+        self.handler = handler
+        self.input_queue = RequestQueue(max_batch_size)
+        self.output_queue = ResponseQueue()
+        self.metrics_client = PROM_CLIENT_REGISTER[metrics_mode](
             name,
             metrics_host,
             metrics_port,
@@ -81,38 +81,38 @@ class VirtexStateMachine(EventLoopContext):
             loop=self.loop)
         self._running = False
 
-    def _check_running(self):
+    def check_running(self):
         if not self._running:
             asyncio.ensure_future(self.__poll_input_queue())
             self._running = True
 
     async def _process_request(self, items: list):
-        @profile(self._metrics_client.observe,
+        @profile(self.metrics_client.observe,
                  'process_request_latency',
                  tstamp_fn=lambda t0, t1: t1 - t0)
         def execute():
-            return self._handler.process_request(items)
+            return self.handler.process_request(items)
         return execute()
 
     async def _run_inference(self, batch: Any):
-        @profile(self._metrics_client.observe,
+        @profile(self.metrics_client.observe,
                  'run_inference_latency',
                  tstamp_fn=lambda t0, t1: t1 - t0)
         def execute():
-            return self._handler.run_inference(batch)
+            return self.handler.run_inference(batch)
         return execute()
 
     async def _process_response(self, result) -> Any:
-        @profile(self._metrics_client.observe,
+        @profile(self.metrics_client.observe,
                  'process_response_latency',
                  tstamp_fn=lambda t0, t1: t1 - t0)
         def execute():
-            return self._handler.process_response(result)
+            return self.handler.process_response(result)
         return execute()
 
     async def __process(self):
-        tasks = self._input_queue.pull()
-        self._metrics_client.observe('batch_size', len(tasks))
+        tasks = self.input_queue.pull()
+        self.metrics_client.observe('batch_size', len(tasks))
         inputs = asyncio.ensure_future(
             self._process_request([task.item for task in tasks]))
         outputs = asyncio.ensure_future(
@@ -123,31 +123,31 @@ class VirtexStateMachine(EventLoopContext):
             resp_futures.append((key, asyncio.ensure_future(
                 self._process_response(result))))
         for key, future in resp_futures:
-            self._output_queue.update({key: await future})
-        self._metrics_client.observe('response_queue_size',
-                                     self._output_queue.qsize())
+            self.output_queue.update({key: await future})
+        self.metrics_client.observe('response_queue_size',
+                                    self.output_queue.qsize())
 
     async def __poll_input_queue(self):
-        size : int
-        full : bool
-        wait : bool
-        time : float = async_now(self.loop)
+        size: int
+        full: bool
+        wait: bool
+        time: float = async_now(self.loop)
         while True:
-            size = self._input_queue.qsize()
+            size = self.input_queue.qsize()
             full = size >= self._max_batch_size
             wait = (async_now(self.loop) - time) \
-                    < self._max_time_on_queue
+                   < self._max_time_on_queue
             if size and (full or not wait):
                 time = async_now(self.loop)
-                self._metrics_client.observe(
+                self.metrics_client.observe(
                     'task_queue_size', size)
                 await self.__process()
             else:
                 await self.sleep()
 
-    async def _poll_output_queue(self, key: str):
+    async def poll_output_queue(self, key: str):
         while True:
-            response = self._output_queue.poll(key)
+            response = self.output_queue.poll(key)
             if response is not WAIT_KEY:
                 return response
             else:

@@ -32,19 +32,19 @@ __all__ = ['HttpLoadTest', 'LoadTestMetrics']
 @dataclass()
 class _LoadTestMetrics:
 
-    test_duration : float
-    num_requests : int
-    num_data : int
-    client_requests_per_second : float
-    server_requests_per_second : float
-    server_data_per_second : float
-    latency_mean : float
-    latency_std : float
-    latency_max : float
-    latency_p50 : float
-    latency_p90 : float
-    latency_p95 : float
-    latency_p99 : float
+    test_duration: float
+    num_requests: int
+    num_data: int
+    client_requests_per_second: float
+    server_requests_per_second: float
+    server_data_per_second: float
+    latency_mean: float
+    latency_std: float
+    latency_max: float
+    latency_p50: float
+    latency_p90: float
+    latency_p95: float
+    latency_p99: float
 
     def dict(self):
         return asdict(self)
@@ -87,16 +87,17 @@ class _LoadTestMetrics:
             latency_p99=round(np.percentile(latencies, 99), 7)
         )
 
+
 @dataclass()
 class LoadTestMetrics:
 
-    num_requests : int
-    num_data : int
-    test_duration_seconds : float
-    client_requests_per_second : float
-    server_requests_per_second : float
-    server_data_per_second : float
-    server_mean_latency_seconds : float
+    num_requests: int
+    num_data: int
+    test_duration_seconds: float
+    client_requests_per_second: float
+    server_requests_per_second: float
+    server_data_per_second: float
+    server_mean_latency_seconds: float
 
     def dict(self):
         return asdict(self)
@@ -134,9 +135,9 @@ class LoadTestMetrics:
 
 
 class LoadTestTask:
-    start_time : float
-    end_time : float
-    resp : Union[asyncio.Future, HttpMessage]
+    start_time: float
+    end_time: float
+    resp: Union[asyncio.Future, HttpMessage]
 
 
 class HttpLoadTest(ClientEventLoopContext):

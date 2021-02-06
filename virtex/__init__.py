@@ -17,9 +17,9 @@
 from .core.worker import VirtexWorker
 from .inference import RequestHandler
 from .http.message import HttpMessage
-from .http.server import HttpServer
+from .http.server import http_server
 from .http.client import HttpClient
 from .http.load_test import HttpLoadTest
 
-__all__ = ['HttpServer', 'HttpClient', 'HttpLoadTest', 'HttpMessage',
+__all__ = ['http_server', 'HttpClient', 'HttpLoadTest', 'HttpMessage',
            'RequestHandler']

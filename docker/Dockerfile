@@ -40,13 +40,20 @@ COPY virtex /root/virtex/virtex
 COPY setup.py /root/virtex/
 COPY req* /root/virtex/
 COPY docker/whl /root/virtex/docker/whl
+COPY docker/huggingface/ /root/.cache/huggingface/
 COPY README.md /root/virtex/
+COPY benchmarks/ /root/virtex/benchmarks/
+COPY tests/ /root/virtex/tests/
+COPY data/get_tiny_imagenet.sh /root/virtex/data/get_tiny_imagenet.sh
 RUN cd $HOME/virtex && \
     source ~/.bashrc && \
     python -m pip install --upgrade pip && \
     python -m pip install -r requirements.txt && \
     python -m pip install -r requirements_serial.txt && \
     python -m pip install -r requirements_gpu.txt && \
+    python -m pip install -r benchmarks/requirements.txt && \
     python setup.py install && \
-    cd .. && rm -rf virtex && \
     conda clean --all
+
+# Entrypoint
+# ENTRYPOINT ["./root/virtex/benchmarks/run.sh"]

@@ -50,7 +50,6 @@ def run():
     pprint.pprint(metrics.dict())
 
 
-
 if __name__ == '__main__':
     path = os.path.dirname(os.path.abspath(__file__))
     N = int(sys.argv[1])    # number of data elements

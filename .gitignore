@@ -9,6 +9,7 @@ docs/*
 docker/cuda/include
 docker/cuda/lib
 docker/whl/*.whl
+docker/huggingface
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

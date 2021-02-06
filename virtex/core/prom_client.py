@@ -124,8 +124,6 @@ class PrometheusGatewayClient(PrometheusBase):
                  port: int,
                  interval: float,
                  loop: BaseEventLoop):
-        if host == 'localhost':
-            host = 'http://0.0.0.0'
         super().__init__(name, host, port, interval, loop)
         self._client = pusher.Pusher(
             job_name=self._name,
