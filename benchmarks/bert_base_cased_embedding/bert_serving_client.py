@@ -25,6 +25,7 @@ async def post(url, session, message):
     async with session.post(url, json=message) as resp:
         return await resp.text()
 
+
 async def post_bundle(url, messages):
     tasks = []
     async with ClientSession() as session:

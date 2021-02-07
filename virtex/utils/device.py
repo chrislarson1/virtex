@@ -14,7 +14,5 @@
 # permissions and limitations under the License.
 # -------------------------------------------------------------------
 
-import pynvml
-
 
 raise NotImplementedError
