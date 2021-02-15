@@ -1,7 +1,7 @@
 ## Virtex
 Virtex is a ML serving framework for running inference on GPUs in poduction.
 
-![release](https://github.com/virtexlabs/virtex/workflows/publish/badge.svg)
+![release](https://github.com/virtexlabs/virtex/workflows/release/badge.svg)
 
 ### Contents
 |                     Section                      |               Description             |
