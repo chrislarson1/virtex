@@ -1,7 +1,7 @@
 ## Virtex
 Virtex is a ML serving framework for running inference on GPUs in poduction.
 
-![release](https://github.com/chrislarson1/virtex/workflows/release/badge.svg?branch=dev)
+![release](https://github.com/virtexlabs/virtex/workflows/publish/badge.svg)
 
 ### Contents
 |                     Section                      |               Description             |
@@ -11,9 +11,9 @@ Virtex is a ML serving framework for running inference on GPUs in poduction.
 | [Installation](#installation)                    | How to install the package            |
 | [Framework](#framework)                          | Virtex overview                       |
 | [Prometheus](#prometheus)                        | Prometheus metrics integration        |
-| [Example](#example)                              | Link to full examples                 |
+| [Examples](#examples)                            | Link to full examples                 |
 | [Performance](#performance)                      | Performance comparison                |
-| [Documentation][(0.1)](http://virtex.ai/docs)    | Full API documentation and more       |
+| [Documentation][(0.1.0)](http://virtex.ai/docs)  | Full API documentation and more       |
 
 ### Design principles
 
@@ -50,15 +50,14 @@ $ pip install virtex
 
 #### From source
 ```bash
-$ git clone https://github.com/virtexlabs/virtex-python.git && cd virtex
-$ python setup.py install develop
+$ git clone https://github.com/virtexlabs/virtex-python.git && cd virtex && pip install .
 ```
 
 ### Framework
 
 See <a href="https://virtex.ai/docs/virtex/types">API documentation</a> for full details.
 
-Virtex consists of four primary components: (1) an `HttpClient` for sending data to the server, (2) an `HttpServer` for handling client requests, (3) a `RequestHandler` to define the computation that runs on the server, and (4) an `HttpMessage` that defines the client/server messaging format. These components are described below.
+Virtex consists of four primary components: (1) an `HttpClient` for sending data to the server, (2) an `http_server` function that returns an http endpoint for handling client requests, (3) a `RequestHandler` to define the computation that runs on the server, and (4) an `HttpMessage` that defines the client/server messaging format. These components are described below.
 
 #### HttpMessage
 
@@ -72,8 +71,8 @@ where `xi` is the *ith* data element of the message. Virtex sends json formatted
 import numpy as np
 import orjson as json
 
-from virtex.http import HttpMessage
-from virtex.http.serial import encode_numpy, decode_numpy
+from virtex import HttpMessage
+from virtex.serial import encode_numpy, decode_numpy
 
 # Request data
 req1 = np.array([[0.3, 0.1],
@@ -124,22 +123,20 @@ To ensure that a given request handler will run on the server, use the `RequestH
 * Always include a unit test that runs these validations in a loop to ensure that GPU memory behaves as expected over multiple model executions.
 
 
-#### HttpServer
-The `HttpServer` class is used to control the behavior of the batching engine. Incoming requests get deserialzed into a `HttpMessage`, and the `data` elements in that message get unpacked onto an input queue. A coroutine continously polls the input queue; its behavior is controlled through the `max_batch_size` and `max_time_on_queue` flags, which specify the maximum queue size and the maximum time (in seconds) between successesive model executions. The server will accumulate items on the queue until one of these conditions is met, and then proceed to run the request handler. In the below example, we instantiate a service called `service_x` and specify these two parameters:
+#### http_server
+The `http_server` function returns a Uvicorn web application. Incoming requests get deserialzed into a `HttpMessage`, and the `data` elements in that message get unpacked onto an input queue. A coroutine continously polls the input queue; its behavior is controlled through the `max_batch_size` and `max_time_on_queue` flags, which specify the maximum queue size and maximum time (in seconds) between successesive model executions. The server will accumulate items on the queue until one of these conditions is met, and then proceed to run the request handler. In the below example, we instantiate a service called `service_x` and specify these two parameters:
 
 ```python 
 # server.py
 
 from virtex.http import Server
 
-server = HttpServer(
+app = http_server(
     name='service_x',
     handler=request_handler_x,
     max_batch_size=128,
     max_time_on_queue=0.01
 )
-
-app = server.app
 ```
 
 To run Virtex servers, we use the Gunicorn process manager to fork our server (`app` in `server.py`) into multiple application instances. Any of the configuration options in Gunicorn can be utilized here; the only requirement is that we specify a special `--worker-class=virtex.VirtexWorker` to ensure that the correct event loop and http networking components get used in the ASGI. As an example, the following bash command will spin up 10 instances of our `service_x` application:
@@ -185,7 +182,9 @@ Virtex comes with a built-in Prometheus metrics integration that supports both `
 To launch your server in scrape mode use the following:
 
 ```python
-server = HttpServer(
+from virtex import http_server
+
+app = http_server(
     name='service_x',
     handler=request_handler_x,
     metrics_host='127.0.0.1',
@@ -193,7 +192,6 @@ server = HttpServer(
     metrics_mode='scrape',
     metrics_interval=0.01
 )
-app = server.app
 ```
 
 When the Virtex server gets launched in scrape mode with multiple workers,  note that each instance must be scraped individually. Under the hood, Virtex will use the specified port number for the first instance, and then increment the port number for each successive worker that comes up. Occupied ports get skipped, and in this case you will need to scan ports in order to scrape your service instances. The recommended solution here is to use a Prometheus pushgateway; if that isn't an option, make sure to choose a block of port numbers (`metrics_port : metrics_port + num-workers`) that is free.
@@ -208,7 +206,9 @@ $ docker run -d -p 9091:9091 prom/pushgateway
 And then run the server in push-mode:
 
 ```python
-server = HttpServer(
+from virtex import http_server
+
+app = http_server(
     name='service_x',
     handler=request_handler_x,
     metrics_host='127.0.0.1',
@@ -216,12 +216,11 @@ server = HttpServer(
     metrics_mode='push',
     metrics_interval=0.01
 )
-app = server.app
 ```
 
 ### Examples
 
-Examples are a WIP, two full deep learning examples can be found in the [example folder](https://github.com/chrislarson1/virtex/tree/master/examples).
+Examples are a WIP, two full deep learning examples can be found in the [virtex-benchmarks repository](https://github.com/virtexlabs/virtex-benchmarks.git).
 
 ### Load testing
 
