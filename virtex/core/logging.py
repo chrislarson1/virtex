@@ -18,28 +18,54 @@ import os
 import json
 import logging
 
-__all__ = ['LOGGER']
+from gunicorn import glogging
+
+__all__ = ['LOGGER', 'VirtexLogger']
 
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "ERROR")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "CRITICAL")
+
+if LOG_LEVEL.lower() == 'critical':
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+elif LOG_LEVEL.lower() == 'error':
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+elif LOG_LEVEL.lower() == 'warning':
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+else:
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
 
-LOG_FORMAT = {"time": "%(asctime)s",
-              "log_level": LOG_LEVEL,
-              "log": "[%(name)s] %(message)s",
-              "stream": "stderr"}
+FORMAT = {
+    "time": "%(asctime)s",
+    "log_level": LOG_LEVEL,
+    "log": "[%(name)s] %(message)s",
+    "stream": "stderr"
+}
 
 
-def logger(name=__name__):
-    formatter = logging.Formatter(json.dumps(LOG_FORMAT),
-                                  datefmt='%Y-%m-%d %H:%M:%S %z')
+def get_formatter():
+    return logging.Formatter(json.dumps(FORMAT),
+                             datefmt='%Y-%m-%d %H:%M:%S %z')
+
+
+def get_logger(logger_name: str):
     handler = logging.StreamHandler()
-    handler.setFormatter(formatter)
-    logger = logging.getLogger(name)
+    handler.setFormatter(get_formatter())
+    logger = logging.getLogger(logger_name)
     logger.addHandler(handler)
     logger.setLevel(LOG_LEVEL)
-    logger.propagate = 0
+    logger.propagate = False
     return logger
 
 
-LOGGER = logger('VIRTEX')
+LOGGER = get_logger(logger_name='virtex')
+
+
+class VirtexLogger(glogging.Logger):
+    def setup(self, cfg):
+        super().setup(cfg)
+        self._set_handler(
+            self.error_log,
+            cfg.errorlog,
+            get_formatter()
+        )

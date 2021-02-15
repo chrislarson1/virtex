@@ -20,6 +20,7 @@ from .http.message import HttpMessage
 from .http.server import http_server
 from .http.client import HttpClient
 from .http.load_test import HttpLoadTest
+from .core.logging import VirtexLogger
 
 __all__ = ['http_server', 'HttpClient', 'HttpLoadTest', 'HttpMessage',
-           'RequestHandler']
+           'RequestHandler', 'VirtexLogger']

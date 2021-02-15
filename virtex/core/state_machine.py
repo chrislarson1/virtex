@@ -24,7 +24,7 @@ from virtex.core.timing import async_now
 from virtex.core.profile import profile
 from virtex.core.event_loop import EventLoopContext
 from virtex.core.queue import RequestQueue, ResponseQueue, WAIT_KEY
-from virtex.core.prom_client import PROM_CLIENT_REGISTER
+from virtex.core.prom_client import PROM_CLIENT
 
 __all__ = ['VirtexStateMachine']
 
@@ -73,7 +73,7 @@ class VirtexStateMachine(EventLoopContext):
         self.handler = handler
         self.input_queue = RequestQueue(max_batch_size)
         self.output_queue = ResponseQueue()
-        self.metrics_client = PROM_CLIENT_REGISTER[metrics_mode](
+        self.metrics_client = PROM_CLIENT[metrics_mode](
             name,
             metrics_host,
             metrics_port,
@@ -136,7 +136,7 @@ class VirtexStateMachine(EventLoopContext):
             size = self.input_queue.qsize()
             full = size >= self._max_batch_size
             wait = (async_now(self.loop) - time) \
-                   < self._max_time_on_queue
+                < self._max_time_on_queue
             if size and (full or not wait):
                 time = async_now(self.loop)
                 self.metrics_client.observe(

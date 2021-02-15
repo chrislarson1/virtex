@@ -51,8 +51,7 @@ $ pip install virtex
 #### From source
 ```bash
 $ git clone https://github.com/virtexlabs/virtex-python.git && cd virtex
-$ pip install -r requirements.txt --user
-$ python setup.py install
+$ python setup.py install develop
 ```
 
 ### Framework

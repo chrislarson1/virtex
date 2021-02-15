@@ -19,25 +19,27 @@ import asyncio
 from asyncio import BaseEventLoop
 from uuid import uuid4
 
+from aiohttp.client_exceptions import ClientOSError
 from aioprometheus import CollectorRegistry, Service, pusher
 
 from virtex.core.logging import LOGGER
 from virtex.core.prom_registry import PROM_METRICS
 
 __all__ = ['PrometheusBase', 'PrometheusClient', 'PrometheusGatewayClient',
-           'PROM_CLIENT_REGISTER']
+           'PROM_CLIENT']
 
 
 def get_ip():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         sock.connect(('10.255.255.255', 1))
-        IP = sock.getsockname()[0]
-    except Exception:
-        IP = 'null'
+        addr = sock.getsockname()[0]
+    except Exception as exc:
+        LOGGER.warning('ip address not available: %s', exc)
+        addr = 'null'
     finally:
         sock.close()
-    return IP
+    return addr
 
 
 SERVER_IP = get_ip()
@@ -65,6 +67,8 @@ class PrometheusBase:
         self._registry = CollectorRegistry()
         for _, metric in PROM_METRICS.items():
             self._registry.register(metric)
+        LOGGER.info('%s prometheus client registered successfully.',
+                    self._name)
 
     @staticmethod
     def observe(key, value):
@@ -130,15 +134,23 @@ class PrometheusGatewayClient(PrometheusBase):
             addr=f'{self._host}:{self._port}')
         self._push_future = asyncio.ensure_future(
             self._client.add(self._registry))
-        asyncio.ensure_future(self._push_gateway_cronjob())
+        self.push_coro = asyncio.ensure_future(
+            self._push_gateway_cronjob())
+
+    def __del__(self):
+        self._push_future.cancel()
 
     async def _push_gateway_cronjob(self):
         while True:
-            await self._push_future
-            self._push_future = asyncio.ensure_future(
-                self._client.add(self._registry))
+            try:
+                await self._push_future
+                self._push_future = asyncio.ensure_future(
+                    self._client.add(self._registry))
+            except ClientOSError as exc:
+                LOGGER.warning('Exception caught in client %s: %s',
+                               self._name, exc)
             await asyncio.sleep(self._interval)
 
 
-PROM_CLIENT_REGISTER = dict(scrape=PrometheusClient,
-                            push=PrometheusGatewayClient)
+PROM_CLIENT = dict(scrape=PrometheusClient,
+                   push=PrometheusGatewayClient)

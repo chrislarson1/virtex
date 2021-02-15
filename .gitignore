@@ -4,6 +4,7 @@
 .local/
 data/tiny-imagenet-200/
 dist/
+build/
 docs/*
 !docs/README.md
 docker/cuda/include

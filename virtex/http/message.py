@@ -38,7 +38,7 @@ class HttpMessage(dict):
         **kwargs : ``kwargs``
             Unpacked dictionary with json-serializable values
         """
-        self.update(**kwargs)
+        super().__init__(**kwargs)
         self.data = data or []
         self.error = error
 

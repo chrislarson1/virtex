@@ -1,4 +1,0 @@
--r requirements_serial.txt
-pytest
-pytest-cov
-pytest-asyncio
