@@ -14,33 +14,8 @@
 # permissions and limitations under the License.
 # -------------------------------------------------------------------
 
-import os
 
-import pytest
-from PIL import Image
-
-from virtex import HttpClient
-
-
-rootdir = os.path.dirname(os.path.abspath(__file__))
-
-
-@pytest.fixture(autouse=True)
-def test_image_bytes():
-    return open(os.path.join(rootdir, "data/test_image.JPEG"), "rb").read()
-
-
-@pytest.fixture(autouse=True)
-def test_image_pil():
-    return Image.open(os.path.join(rootdir, "data/test_image.JPEG"))
-
-
-@pytest.fixture(autouse=True)
-def tweets():
-    return [tweet.strip() for tweet in open(
-        os.path.join(rootdir, "data/tweets.txt"), "r").readlines()]
-
-
-@pytest.fixture(autouse=True)
-def client():
-    HttpClient()
+pytest . \
+  -m "not serialization_speed" \
+  --disable-warnings \
+  --ignore=virtex
