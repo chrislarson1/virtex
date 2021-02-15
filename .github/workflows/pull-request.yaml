@@ -22,5 +22,5 @@ jobs:
         pip install . --user
     - name: Test with pytest
       run: |
-        pip install -r test/requirements.txt
+        pip install -r tests/requirements.txt
         ./tests/pytest.sh
