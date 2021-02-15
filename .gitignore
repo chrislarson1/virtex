@@ -2,13 +2,8 @@
 *.DS_Store
 .idea/
 .local/
-data/tiny-imagenet-200/
 docs/*
 !docs/README.md
-docker/cuda/include
-docker/cuda/lib
-docker/whl/*.whl
-docker/huggingface
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
