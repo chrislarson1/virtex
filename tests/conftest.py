@@ -31,7 +31,7 @@ def test_image_bytes():
 
 
 @pytest.fixture(autouse=True)
-def test_image_PIL():
+def test_image_pil():
     return Image.open(os.path.join(rootdir, "data/test_image.JPEG"))
 
 

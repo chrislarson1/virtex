@@ -16,13 +16,18 @@
 
 import time
 
+import pytest
 import orjson
+import torch
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 
 from virtex.serial import *
 from virtex.serial.pandas import encode_pandas, decode_pandas
-from virtex.serial.numpy import encode_numpy, decode_numpy
+from virtex.serial.pillow import encode_pil, decode_pil, decode_pil_from_bytes
+from virtex.serial.tf import encode_tf, decode_tf
+from virtex.serial.torch import encode_torch, decode_torch
 
 
 def test_numpy():
@@ -42,24 +47,25 @@ def test_pandas():
     assert xd.equals(x)
 
 
-def test_PIL(test_image_PIL):
-    img_enc = encode_pil(test_image_PIL)
+def test_pil(test_image_pil):
+    img_enc = encode_pil(test_image_pil)
     img_dec = decode_pil(img_enc)
-    im1 = np.asarray(test_image_PIL)
+    im1 = np.asarray(test_image_pil)
     im2 = np.asarray(img_dec)
     assert np.array_equal(im1, im2), \
         print(np.sum(im1 - im2, keepdims=False))
 
 
-def test_PIL_from_bytes(test_image_bytes, test_image_PIL):
+def test_pil_from_bytes(test_image_bytes, test_image_pil):
     img_enc = encode_bytes(test_image_bytes)
     img_dec = decode_pil_from_bytes(img_enc)
-    im1 = np.asarray(test_image_PIL)
+    im1 = np.asarray(test_image_pil)
     im2 = np.asarray(img_dec)
     assert np.array_equal(im1, im2), \
         print(np.sum(im1 - im2, keepdims=False))
 
 
+@pytest.mark.serialization_speed
 def test_check_numpy_serialization_speed():
 
     """
@@ -87,7 +93,8 @@ def test_check_numpy_serialization_speed():
     t1 = time.time()
     t_pickle = t1 - t0
 
-    assert (t_pickle / t_orjson) < 2.25
+    ratio = t_pickle / t_orjson
+    assert ratio < 2.25
 
     t0 = time.time()
     orjson.loads(enc_orjson)
@@ -99,4 +106,19 @@ def test_check_numpy_serialization_speed():
     t1 = time.time()
     t_pickle = t1 - t0
 
-    assert (t_pickle / t_orjson) < 0.55
+    ratio = t_pickle / t_orjson
+    assert ratio < 0.55
+
+
+def test_torch():
+    x_orig = torch.randn((1000, 10), dtype=torch.double)
+    x_enc = encode_torch(x_orig)
+    x_dec = decode_torch(x_enc)
+    assert torch.eq(x_dec, x_orig).all()
+
+
+def test_tensorflow():
+    x_orig = tf.random.normal((1, 10), dtype=tf.double)
+    x_enc = encode_tf(x_orig)
+    x_dec = decode_tf(x_enc)
+    assert tf.reduce_all(tf.math.equal(x_dec, x_orig))

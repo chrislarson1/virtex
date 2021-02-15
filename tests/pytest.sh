@@ -15,4 +15,6 @@
 # -------------------------------------------------------------------
 
 
-pytest --disable-warnings .
+pytest . \
+  -m "not serialization_speed" \
+  --disable-warnings
