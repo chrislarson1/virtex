@@ -17,4 +17,5 @@
 
 pytest . \
   -m "not serialization_speed" \
-  --disable-warnings
+  --disable-warnings \
+  --ignore=virtex
