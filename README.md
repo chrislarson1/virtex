@@ -13,7 +13,7 @@ Virtex is a ML serving framework for running inference on GPUs in poduction.
 | [Prometheus](#prometheus)                        | Prometheus metrics integration        |
 | [Examples](#examples)                            | Link to full examples                 |
 | [Performance](#performance)                      | Performance comparison                |
-| [Documentation][(0.1.0)](http://virtex.ai/docs)  | Full API documentation and more       |
+| [Documentation][(0.1.1)](http://virtex.ai/docs)  | Full API documentation and more       |
 
 ### Design principles
 
