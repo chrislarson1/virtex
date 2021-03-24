@@ -24,6 +24,5 @@ class VirtexWorker(UvicornWorker):
                      "http": "httptools",
                      "lifespan": "off",
                      "interface": "asgi3",
-                     "limit_concurrency": 10000,
-                     "limit_max_requests": 10000,
+                     "limit_concurrency": 100000,
                      "factory": True}
