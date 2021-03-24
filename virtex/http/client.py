@@ -34,9 +34,9 @@ class HttpClient(ClientEventLoopContext):
     def __init__(self):
         super().__init__()
 
-    @staticmethod
-    def __validate_message(message: HttpMessage):
-        if not isinstance(message, HttpMessage):
+    @classmethod
+    def validate_message(cls, message: HttpMessage):
+        if not isinstance(message, cls):
             raise RuntimeError("message must be of type HttpMessage!")
         if not isinstance(message.data, list):
             raise RuntimeError(
@@ -60,9 +60,15 @@ class HttpClient(ClientEventLoopContext):
             The ``data`` member contains an array of responses of form
             ``{ "data": [ resp1 ... respN ] }``.
         """
-        self.__validate_message(message)
+        self.validate_message(message)
         async with self.session.post(url, data=message.json) as resp:
-            return HttpMessage(**json.loads(await resp.text()))
+            try:
+                message = HttpMessage(**json.loads(await resp.text()))
+            except ConnectionResetError as exc:
+                message = HttpMessage(error=str(exc))
+            except Exception as exc:
+                message = HttpMessage(error=str(exc))
+            return message
 
     async def post_bundle_async(self, url, messages) -> List[HttpMessage]:
         """ POST message bundle to url (async)
