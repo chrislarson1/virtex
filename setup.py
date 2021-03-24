@@ -20,7 +20,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="virtex",
-    version="0.1.2",
+    version="0.1.3",
     author="Chris Larson",
     author_email="chris7larson@gmail.com",
     description="Serving for computational workloads",
