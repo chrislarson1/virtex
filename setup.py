@@ -39,6 +39,7 @@ setup(
         "tests/"
     ]),
     install_requires=[
+        'typing_extensions>=3.7.4.2',
         'aiohttp==3.6.2',
         'aioprometheus[aiohttp]==20.0.1',
         'gunicorn==20.0.4',
