@@ -13,7 +13,7 @@ Virtex is a ML serving framework for running inference on GPUs in poduction.
 | [Prometheus](#prometheus)                        | Prometheus metrics integration        |
 | [Examples](#examples)                            | Link to full examples                 |
 | [Performance](#performance)                      | Performance comparison                |
-| [Documentation][(0.1.1)](http://virtex.ai/docs)  | Full API documentation and more       |
+| [Documentation][(0.1.2)](http://virtex.ai/docs)  | Full API documentation and more       |
 
 ### Design principles
 
@@ -175,7 +175,7 @@ prediction = resp.data
 
 ### Prometheus
 
-Virtex comes with a built-in Prometheus metrics integration that supports both `scrape` and `push` consumption models; the latter is recommended for applications running more than a single server instance. Metrics can be configured using the `metrics_host` (default='http://127.0.0.1'), `metrics_port` (default=9090), `metrics_mode` (default='scrape'), and `metrics_interval` (default=0.01, seconds) arguments in the `HttpServer` constructor. 
+Virtex comes with a built-in Prometheus metrics integration that supports both `scrape` and `push` consumption models; the latter is recommended for applications running more than a single server instance. Metrics are turned off by default. Metrics can be configured using the `metrics_host` (default='http://127.0.0.1'), `metrics_port` (default=9090), `metrics_mode` (default='off'), and `metrics_interval` (default=0.01, seconds) arguments in the `HttpServer` constructor. 
 
 #### Scrape
 

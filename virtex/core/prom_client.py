@@ -152,5 +152,13 @@ class PrometheusGatewayClient(PrometheusBase):
             await asyncio.sleep(self._interval)
 
 
+class NullMetricsClient:
+    def __init__(self, *args, **kwargs):
+        pass
+    def observe(self, *args, **kwargs):
+        pass
+
+
 PROM_CLIENT = dict(scrape=PrometheusClient,
-                   push=PrometheusGatewayClient)
+                   push=PrometheusGatewayClient,
+                   off=NullMetricsClient)

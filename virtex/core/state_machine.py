@@ -43,7 +43,7 @@ class VirtexStateMachine(EventLoopContext):
                  max_time_on_queue: float,
                  metrics_host: str,
                  metrics_port: int,
-                 metrics_mode: Literal['push', 'scrape'],
+                 metrics_mode: Literal['push', 'scrape', 'off'],
                  metrics_interval: float):
         """
         Parameters
@@ -64,9 +64,9 @@ class VirtexStateMachine(EventLoopContext):
         metrics_interval: ``float``
             Metrics push interval (seconds)
         """
-        if metrics_mode not in ('scrape', 'push'):
+        if metrics_mode not in ('scrape', 'push', 'off'):
             raise ValueError(
-                "metrics_mode must be set to 'scrape' or 'push'.")
+                "metrics_mode must be set to 'scrape' or 'push' or 'off'.")
         super().__init__()
         self._max_batch_size = max_batch_size
         self._max_time_on_queue = max_time_on_queue
