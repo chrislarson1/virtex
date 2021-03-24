@@ -17,11 +17,8 @@
 import asyncio
 
 import uvloop
-from aiohttp import ClientSession
 
-from virtex.core.logging import LOGGER
-
-__all__ = ['EventLoopContext', 'ClientEventLoopContext']
+__all__ = ['EventLoopContext']
 
 
 CLOCK_INTERVAL = 1e-6
@@ -55,27 +52,3 @@ class EventLoopContext:
             Event loop
         """
         return self._loop
-
-
-class ClientEventLoopContext(EventLoopContext):
-
-    """
-    Context manager for client event loop
-
-    Attributes
-    ----------
-    session: ``aiohttp.ClientSession``
-        aiohttp client session
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.session = ClientSession(loop=self.loop)
-
-    def __del__(self):
-        try:
-            self.loop.run_until_complete(self.session.close())
-        except Exception as exc:
-            LOGGER.warning(exc)
-        finally:
-            super().__del__()

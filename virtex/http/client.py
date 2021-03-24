@@ -13,19 +13,19 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 # -------------------------------------------------------------------
-
 import asyncio
 from typing import List
 
 import orjson as json
+from aiohttp import ClientSession
 
 from virtex.http.message import HttpMessage
-from virtex.core.event_loop import ClientEventLoopContext
+from virtex.core.event_loop import EventLoopContext
 
 __all__ = ['HttpClient']
 
 
-class HttpClient(ClientEventLoopContext):
+class HttpClient(EventLoopContext):
 
     """
     Virtex HTTP client
@@ -41,6 +41,11 @@ class HttpClient(ClientEventLoopContext):
         if not isinstance(message.data, list):
             raise RuntimeError(
                 "message.data must be of form [ item1 ... itemN ].")
+
+    @staticmethod
+    async def __post(client, url, message):
+        async with client.post(url, data=message.json) as resp:
+            return await resp.text()
 
     async def post_async(self, url, message):
         """ POST message to url (async)
@@ -60,13 +65,13 @@ class HttpClient(ClientEventLoopContext):
             The ``data`` member contains an array of responses of form
             ``{ "data": [ resp1 ... respN ] }``.
         """
-        self.validate_message(message)
-        async with self.session.post(url, data=message.json) as resp:
-            try:
-                message = HttpMessage(**json.loads(await resp.text()))
-            except Exception as exc:
-                message = HttpMessage(error=str(exc))
-            return message
+        try:
+            async with ClientSession(loop=self.loop) as client:
+                message = HttpMessage(**json.loads(
+                    await self.__post(client, url, message)))
+        except Exception as exc:
+            message = HttpMessage(error=str(exc))
+        return message
 
     async def post_bundle_async(self, url, messages) -> List[HttpMessage]:
         """ POST message bundle to url (async)
