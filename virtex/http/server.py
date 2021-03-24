@@ -107,7 +107,7 @@ def http_server(name: str,
                 max_time_on_queue: float = 0.005,
                 metrics_host: str = '127.0.0.1',
                 metrics_port: int = 9090,
-                metrics_mode: Literal['push', 'scrape'] = 'push',
+                metrics_mode: Literal['push', 'scrape', 'off'] = 'off',
                 metrics_interval: float = 0.01):
     """
     Returns a web server that implements the computation handler
