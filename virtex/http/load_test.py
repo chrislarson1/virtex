@@ -19,10 +19,9 @@ from dataclasses import dataclass, asdict
 from typing import List, Tuple, Union
 
 import numpy as np
-import orjson as json
 
+from virtex.http.client import HttpClient
 from virtex.core.logging import LOGGER
-from virtex.core.event_loop import ClientEventLoopContext
 from virtex.http.message import HttpMessage
 from virtex.core.timing import async_now
 
@@ -140,7 +139,7 @@ class LoadTestTask:
     resp: Union[asyncio.Future, HttpMessage]
 
 
-class HttpLoadTest(ClientEventLoopContext):
+class HttpLoadTest():
 
     """
     Virtex HTTP load test client
@@ -163,14 +162,16 @@ class HttpLoadTest(ClientEventLoopContext):
 
     def __init__(self):
         super().__init__()
+        self.client = HttpClient()
+        self.loop = self.client.loop
+        self.sleep = self.client.sleep
 
     async def __send(self, url, message):
         task = LoadTestTask()
         task.start_time = async_now(self.loop)
-        async with self.session.post(url, data=message.json) as resp:
-            task.resp = HttpMessage(**json.loads(await resp.text()))
-            task.end_time = async_now(self.loop)
-            self._tasks.append(task)
+        task.resp = await self.client.post_async(url, message)
+        task.end_time = async_now(self.loop)
+        self._tasks.append(task)
 
     def __flush(self, n_messages: int):
         self._n_messages = n_messages

@@ -34,9 +34,9 @@ class HttpClient(ClientEventLoopContext):
     def __init__(self):
         super().__init__()
 
-    @classmethod
-    def validate_message(cls, message: HttpMessage):
-        if not isinstance(message, cls):
+    @staticmethod
+    def validate_message(message: HttpMessage):
+        if not isinstance(message, HttpMessage):
             raise RuntimeError("message must be of type HttpMessage!")
         if not isinstance(message.data, list):
             raise RuntimeError(
@@ -64,8 +64,6 @@ class HttpClient(ClientEventLoopContext):
         async with self.session.post(url, data=message.json) as resp:
             try:
                 message = HttpMessage(**json.loads(await resp.text()))
-            except ConnectionResetError as exc:
-                message = HttpMessage(error=str(exc))
             except Exception as exc:
                 message = HttpMessage(error=str(exc))
             return message
