@@ -15,6 +15,7 @@
 # -------------------------------------------------------------------
 
 import socket
+import requests
 import asyncio
 from asyncio import BaseEventLoop
 from uuid import uuid4
@@ -29,26 +30,16 @@ __all__ = ['PrometheusBase', 'PrometheusClient', 'PrometheusGatewayClient',
            'PROM_CLIENT']
 
 
-def get_ip():
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        sock.connect(('10.255.255.255', 1))
-        addr = sock.getsockname()[0]
-    except Exception as exc:
-        LOGGER.warning('ip address not available: %s', exc)
-        addr = 'null'
-    finally:
-        sock.close()
-    return addr
+def check_port(port: int):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        in_use = sock.connect_ex(("127.0.0.1", port)) != 0
+    return in_use
 
-
-SERVER_IP = get_ip()
 
 SERVER_ID = uuid4().hex[:8]
 
-PROM_LABELS = {'server_ip': SERVER_IP, 'instance': SERVER_ID}
 
-MAX_PORT_INC = 10
+PROM_LABELS = {'server_instance': SERVER_ID}
 
 
 class PrometheusBase:
@@ -57,18 +48,20 @@ class PrometheusBase:
                  name: str,
                  host: str,
                  port: int,
-                 interval: float,
                  loop: BaseEventLoop):
         self._name = f'{name}-{SERVER_ID}'
         self._host = host
         self._port = port
-        self._interval = interval
         self.loop = loop
         self._registry = CollectorRegistry()
         for _, metric in PROM_METRICS.items():
             self._registry.register(metric)
         LOGGER.info('%s prometheus client registered successfully.',
                     self._name)
+
+    @staticmethod
+    def add(key, value):
+        PROM_METRICS[key].add(labels=PROM_LABELS, value=value)
 
     @staticmethod
     def observe(key, value):
@@ -81,39 +74,35 @@ class PrometheusClient(PrometheusBase):
                  name: str,
                  host: str,
                  port: int,
-                 interval: float,
-                 loop: BaseEventLoop):
-        if host in ('http://127.0.0.1', 'http://0.0.0.0'):
-            host = 'localhost'
-        super().__init__(name, host, port, interval, loop)
-        asyncio.ensure_future(self.start(port))
+                 loop: BaseEventLoop,
+                 *args):
+        super().__init__(name, host, port, loop)
+        asyncio.ensure_future(self.start())
 
-    async def start(self, port):
+    async def start(self):
         """
         Runs a prometheus metrics server on ``port``. If ``port`` is already
-        in use, this function will try to increment the port number until
-        it finds an available one, up to ``MAX_PROC_WHEN_SCRAPE``.
+        in use, we send a request to validate that its running a prometheus
+        server and raise an error if not.
         """
-        for _ in range(MAX_PORT_INC):
+        if check_port(self._port):
             try:
                 service = Service(self._registry, loop=self.loop)
-                await service.start(addr=self._host, port=self._port)
+                await service.start(addr=self._host.lstrip('http://'), port=self._port)
                 self._service = service
-                break
-            except OSError:
-                LOGGER.warning(
-                    'Failed to launch prometheus server on port %d.',
-                    self._port
-                )
-                self._port += 1
-        if not getattr(self, '_service', None):
-            raise RuntimeError(
-                "Failed to launch prometheus server on ports %d-%d, Exiting.",
-                port, self._port
-            )
+                LOGGER.info("Prometheus service launched on %s:%d",
+                            self._host, self._port)
+            except Exception as exc:
+                LOGGER.error('Could not start server on %s:%d: %s',
+                             self._host, self._port, exc)
         else:
-            LOGGER.info("Prometheus service running on %s:%d",
-                        self._host, self._port)
+            check = requests.get(f"{self._host}:{self._port}/metrics")
+            if check.status_code != 200:
+                LOGGER.error('Could not find prometheus service on %s:%d: %s',
+                             self._host, self._port)
+            else:
+                LOGGER.info("Prometheus service found on %s:%d",
+                            self._host, self._port)
 
     def __del__(self):
         if getattr(self, '_service', None):
@@ -126,9 +115,10 @@ class PrometheusGatewayClient(PrometheusBase):
                  name: str,
                  host: str,
                  port: int,
-                 interval: float,
-                 loop: BaseEventLoop):
-        super().__init__(name, host, port, interval, loop)
+                 loop: BaseEventLoop,
+                 interval: float):
+        super().__init__(name, host, port, loop)
+        self._interval = interval
         self._client = pusher.Pusher(
             job_name=self._name,
             addr=f'{self._host}:{self._port}')
@@ -154,6 +144,8 @@ class PrometheusGatewayClient(PrometheusBase):
 
 class NullMetricsClient:
     def __init__(self, *args, **kwargs):
+        pass
+    def add(self, *args, **kwargs):
         pass
     def observe(self, *args, **kwargs):
         pass

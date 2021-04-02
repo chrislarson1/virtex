@@ -13,7 +13,7 @@ Virtex is a ML serving framework for running inference on GPUs in poduction.
 | [Prometheus](#prometheus)                        | Prometheus metrics integration        |
 | [Examples](#examples)                            | Link to full examples                 |
 | [Performance](#performance)                      | Performance comparison                |
-| [Documentation][(0.1.3)](http://virtex.ai/docs)  | Full API documentation and more       |
+| [Documentation][(0.1.4)](http://virtex.ai/docs)  | Full API documentation and more       |
 
 ### Design principles
 
@@ -145,10 +145,10 @@ To run Virtex servers, we use the Gunicorn process manager to fork our server (`
 gunicorn server:app \
   --workers 10 \
   --worker-class virtex.VirtexWorker \
-  --bind localhost:8081 \
-  --max-requests 10000 \
-  --worker-connections 10000 \
-  --log-level critical
+  --bind 0.0.0.0:8081 \
+  --worker-connections 100000 \
+  --timeout 120 \
+  --log-level CRITICAL
 ```
 
 #### HttpClient
@@ -175,7 +175,7 @@ prediction = resp.data
 
 ### Prometheus
 
-Virtex comes with a built-in Prometheus metrics integration that supports both `scrape` and `push` consumption models; the latter is recommended for applications running more than a single server instance. Metrics are turned off by default. Metrics can be configured using the `metrics_host` (default='http://127.0.0.1'), `metrics_port` (default=9090), `metrics_mode` (default='off'), and `metrics_interval` (default=0.01, seconds) arguments in the `HttpServer` constructor. 
+Virtex comes with a built-in Prometheus metrics integration that supports both `scrape` and `push` consumption models. Prometheus metrics are turned off by default. Metrics can be configured using the `prom_host` (default='http://127.0.0.1'), `prom_port` (default=9090), `prom_mode` (default='off'), and `prom_interval` (default=0.01, seconds) arguments in `http_server`. 
 
 #### Scrape
 
@@ -187,14 +187,12 @@ from virtex import http_server
 app = http_server(
     name='service_x',
     handler=request_handler_x,
-    metrics_host='127.0.0.1',
-    metrics_port=9090,
-    metrics_mode='scrape',
-    metrics_interval=0.01
+    prom_host='127.0.0.1',
+    prom_port=9090,
+    prom_mode='scrape',
+    prom_push_interval=0.01
 )
 ```
-
-When the Virtex server gets launched in scrape mode with multiple workers,  note that each instance must be scraped individually. Under the hood, Virtex will use the specified port number for the first instance, and then increment the port number for each successive worker that comes up. Occupied ports get skipped, and in this case you will need to scan ports in order to scrape your service instances. The recommended solution here is to use a Prometheus pushgateway; if that isn't an option, make sure to choose a block of port numbers (`metrics_port : metrics_port + num-workers`) that is free.
 
 #### Push gateway
 Ensure that you have a Prometheus pushgateway to push to. To test locally run the following:
@@ -211,10 +209,10 @@ from virtex import http_server
 app = http_server(
     name='service_x',
     handler=request_handler_x,
-    metrics_host='127.0.0.1',
-    metrics_port=9091,
-    metrics_mode='push',
-    metrics_interval=0.01
+    prom_host='127.0.0.1',
+    prom_port=9091,
+    prom_mode='push',
+    prom_push_interval=0.01
 )
 ```
 

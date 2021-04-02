@@ -14,26 +14,34 @@
 # permissions and limitations under the License.
 # -------------------------------------------------------------------
 
-from aioprometheus import Summary
+from aioprometheus import Summary, Counter
 
 __all__ = ['PROM_METRICS']
 
 
 PROM_METRICS = dict(
-    server_latency = Summary('server_latency',
-                             'server request handler latency (ms)'),
-    server_throughput = Summary('server_throughput',
-                                'server transactions per second'),
-    process_request_latency = Summary('process_request_latency',
-                                      'process_request handler latency (ms)'),
-    run_inference_latency = Summary('run_inference_latency',
-                                    'run_inference handler latency (ms)'),
-    process_response_latency = Summary('process_response_latency',
+    requests_total = Counter('requests_total',
+                             'requests total'),
+    queries_total = Counter('queries_total',
+                             'queries total'),
+    queries_per_request = Summary('queries_per_request',
+                                  'number of queries per request'),
+    server_latency = Summary('server_latency_milliseconds',
+                             'server request handler latency'),
+    server_qps = Summary('server_throughput_qps',
+                         'server queries per second'),
+    server_rps = Summary('server_throughput_rps',
+                         'server requests per second'),
+    process_request_latency = Summary('process_request_latency_milliseconds',
+                                      'process_request handler latency'),
+    run_inference_latency = Summary('run_inference_latency_milliseconds',
+                                    'run_inference handler latency'),
+    process_response_latency = Summary('process_response_latency_milliseconds',
                                        'process_response handler latency (ms)'),
-    batch_size = Summary('batch_size',
-                         'batch size of tasks processed from queue'),
-    task_queue_size = Summary('task_queue_size',
-                              'task queue size'),
+    inference_batch_size = Summary('inference_batch_size',
+                                   'inference batch size'),
+    request_queue_size = Summary('request_queue_size',
+                                 'request queue size'),
     response_queue_size = Summary('response_queue_size',
                                   'response queue size')
 )
