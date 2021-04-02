@@ -13,14 +13,12 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 # -------------------------------------------------------------------
-
 from .core.worker import VirtexWorker
 from .inference import RequestHandler
 from .http.message import HttpMessage
 from .http.server import http_server
 from .http.client import HttpClient
 from .http.load_test import HttpLoadTest
-from .core.logging import VirtexLogger
 
-__all__ = ['http_server', 'HttpClient', 'HttpLoadTest', 'HttpMessage',
-           'RequestHandler', 'VirtexLogger']
+__all__ = ['http_server', 'HttpClient', 'HttpLoadTest',
+           'HttpMessage', 'RequestHandler']

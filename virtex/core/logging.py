@@ -13,18 +13,17 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 # -------------------------------------------------------------------
-
 import os
 import json
 import logging
 
-from gunicorn import glogging
-
-__all__ = ['LOGGER', 'VirtexLogger']
+__all__ = ['LOGGER']
 
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "CRITICAL")
 
+
+# Force tensorflow to respect loglevel
 if LOG_LEVEL.lower() == 'critical':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 elif LOG_LEVEL.lower() == 'error':
@@ -59,13 +58,3 @@ def get_logger(logger_name: str):
 
 
 LOGGER = get_logger(logger_name='virtex')
-
-
-class VirtexLogger(glogging.Logger):
-    def setup(self, cfg):
-        super().setup(cfg)
-        self._set_handler(
-            self.error_log,
-            cfg.errorlog,
-            get_formatter()
-        )

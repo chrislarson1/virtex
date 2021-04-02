@@ -61,6 +61,7 @@ class VirtexStateMachine(EventLoopContext):
         prom_push_interval: ``float``
             Metrics push interval (seconds)
         """
+        self.name = name
         if prom_mode not in ('scrape', 'push', 'off'):
             raise ValueError(
                 "metrics_mode must be set to 'scrape' or 'push' or 'off'.")
@@ -140,7 +141,7 @@ class VirtexStateMachine(EventLoopContext):
                     'request_queue_size', size)
                 await self.__process()
             else:
-                await self.sleep()
+                await asyncio.sleep(self.CLOCK)
 
     async def poll_output_queue(self, key: str):
         while True:
@@ -148,4 +149,4 @@ class VirtexStateMachine(EventLoopContext):
             if response is not WAIT_KEY:
                 return response
             else:
-                await self.sleep()
+                await asyncio.sleep(self.CLOCK)

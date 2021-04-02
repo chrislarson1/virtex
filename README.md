@@ -13,7 +13,7 @@ Virtex is a ML serving framework for running inference on GPUs in poduction.
 | [Prometheus](#prometheus)                        | Prometheus metrics integration        |
 | [Examples](#examples)                            | Link to full examples                 |
 | [Performance](#performance)                      | Performance comparison                |
-| [Documentation][(0.1.4)](http://virtex.ai/docs)  | Full API documentation and more       |
+| [Documentation][(0.1.5)](http://virtex.ai/docs)  | Full API documentation and more       |
 
 ### Design principles
 
@@ -41,7 +41,7 @@ Virtex is a ML serving framework for running inference on GPUs in poduction.
     - Bytes
 
 ### Installation
-Virtex is Python 3.6.5+ compatible.
+Virtex is Python 3.6.6+ compatible.
 
 #### With pip
 ```bash
@@ -222,7 +222,7 @@ Examples are a WIP, two full deep learning examples can be found in the [virtex-
 
 ### Load testing
 
-Virtex come out-of-the-box with a bare-bones load testing client (`HttpLoadTest`) that can be used to profile performance when building and configuring servers. At the moment it is limited to a single thread (i.e., it's not distributed to simultate multiple clients, this is todo), but even on a single thread it can produce about 3500 requests per second which should be sufficient to evaluate the throughput of most servers running largeish models. Each of the examples in the examples folder demonstrate its use.
+Virtex come out-of-the-box with a bare-bones load testing client (`HttpLoadTest`) that can be used to profile performance when building and configuring servers. At the moment it is limited to a single thread (i.e., it's not distributed to simultate multiple clients, this is todo), but even on a single thread it can produce about 5000 requests per second which should be sufficient to evaluate the throughput of most servers running largeish models. Each of the examples in the examples folder demonstrate its use.
 
 
 ### Performance

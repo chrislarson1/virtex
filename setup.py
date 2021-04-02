@@ -20,7 +20,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="virtex",
-    version="0.1.4",
+    version="0.1.5-rc.1",
     author="Chris Larson",
     author_email="chris7larson@gmail.com",
     description="Serving for computational workloads",
@@ -28,7 +28,7 @@ setup(
     long_description_content_type="text/markdown",
     keywords='machine deep learning ai serving asyncronous microservice',
     license='Apache Version 2.0',
-    python_requires='>=3.6.5',
+    python_requires='>=3.6.6',
     url="https://github.com/virtexlabs/virtex.git",
     packages=find_packages(exclude=[
         "*.data",
@@ -39,9 +39,8 @@ setup(
         "tests/"
     ]),
     install_requires=[
-        'typing_extensions>=3.7.4.2',
-        'aiohttp==3.6.2',
         'aioprometheus[aiohttp]==20.0.1',
+        'aiosonic==0.9.7',
         'gunicorn==20.0.4',
         'httptools==0.1.1',
         'numpy>=1.18.1',

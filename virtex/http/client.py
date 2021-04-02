@@ -17,8 +17,9 @@ import asyncio
 from typing import List
 
 import orjson as json
-from aiohttp import ClientSession
+from aiosonic import HTTPClient
 
+from virtex.core.logging import LOGGER
 from virtex.http.message import HttpMessage
 from virtex.core.event_loop import EventLoopContext
 
@@ -33,6 +34,10 @@ class HttpClient(EventLoopContext):
 
     def __init__(self):
         super().__init__()
+        self.client = HTTPClient()
+
+    def __del__(self):
+        self.loop.run_until_complete(self.client.shutdown())
 
     @staticmethod
     def validate_message(message: HttpMessage):
@@ -41,11 +46,6 @@ class HttpClient(EventLoopContext):
         if not isinstance(message.data, list):
             raise RuntimeError(
                 "message.data must be of form [ item1 ... itemN ].")
-
-    @staticmethod
-    async def __post(client, url, message):
-        async with client.post(url, data=message.json) as resp:
-            return await resp.text()
 
     async def post_async(self, url, message):
         """ POST message to url (async)
@@ -66,11 +66,11 @@ class HttpClient(EventLoopContext):
             ``{ "data": [ resp1 ... respN ] }``.
         """
         try:
-            async with ClientSession(loop=self.loop) as client:
-                message = HttpMessage(**json.loads(
-                    await self.__post(client, url, message)))
+            resp = await self.client.post(url, data=message.json)
+            message = HttpMessage(**json.loads(await resp.text()))
         except Exception as exc:
             message = HttpMessage(error=str(exc))
+            LOGGER.debug("Client exception: %s", exc)
         return message
 
     async def post_bundle_async(self, url, messages) -> List[HttpMessage]:

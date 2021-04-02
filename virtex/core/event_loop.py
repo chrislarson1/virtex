@@ -21,14 +21,18 @@ import uvloop
 __all__ = ['EventLoopContext']
 
 
-CLOCK_INTERVAL = 1e-6
-
-
 class EventLoopContext:
 
     """
     Context manager for virtex event-loops
     """
+
+    # asyncio resolution is ~1ms, we use CLOCK
+    # to gaurantee sleep intervals of >= 1ms
+    # so that daemon tasks don't hog cpu cycles.
+    # This is as good as one can do for realtime
+    # event processing in Python.
+    CLOCK = 1e-3
 
     def __init__(self):
         uvloop.install()
@@ -38,10 +42,6 @@ class EventLoopContext:
 
     def __del__(self):
         self._loop.close()
-
-    @staticmethod
-    async def sleep():
-        await asyncio.sleep(CLOCK_INTERVAL)
 
     @property
     def loop(self):
