@@ -13,7 +13,6 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 # -------------------------------------------------------------------
-
 from uvicorn.workers import UvicornWorker
 
 __all__ = ['VirtexWorker']
@@ -25,4 +24,5 @@ class VirtexWorker(UvicornWorker):
                      "lifespan": "off",
                      "interface": "asgi3",
                      "limit_concurrency": 100000,
+                     "timeout_keep_alive": 20,
                      "factory": True}

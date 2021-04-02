@@ -46,8 +46,8 @@ async def read_body(receive):
 def make_header(status):
     return {'type': 'http.response.start',
             'status': status,
-            'headers': [[b'content-type',
-                         b'application/json']]}
+            'headers': [(b'content-type', b'application/json'),
+                        (b'connection', b'keep-alive')]}
 
 
 def make_body(response):
@@ -61,15 +61,17 @@ def app(state_machine: VirtexStateMachine):
                     start_t=None, num_queries=None):
         await send(make_header(status))
         await send(make_body(response))
-        if start_t and num_queries:
-            latency = async_now(state_machine.loop) - start_t
-            state_machine.prom_client.observe(
-                'server_rps', value=1000 * (1 / latency))
-            state_machine.prom_client.observe(
-                'server_qps', value=1000 * (num_queries / latency))
+        if status == 200 and start_t and num_queries:
+            end_t = async_now(state_machine.loop)
+            latency = end_t - start_t
+            if latency > 0:
+                state_machine.prom_client.observe(
+                    'server_rps', value=1000 * (1 / latency))
+                state_machine.prom_client.observe(
+                    'server_qps', value=1000 * (num_queries / latency))
 
     def _app():
-        """ASGI3 compliant wrapper"""
+        """ASGI3 wrapper"""
         @profile(state_machine.prom_client.observe,
                  'server_latency',
                  tstamp_fn=lambda t0, t1: t1 - t0,
@@ -104,8 +106,8 @@ def app(state_machine: VirtexStateMachine):
                             num_queries=len(tasks),
                             start_t=start_t)
                 return
-            except Exception as e:
-                msg = f"HttpServer caught exception: {str(e)}"
+            except Exception as exc:
+                msg = f"{state_machine.name} caught exception: {str(exc)}"
                 LOGGER.exception(msg=msg)
                 await _send(send, 500, HttpMessage(error=msg))
 
