@@ -13,7 +13,6 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 # -------------------------------------------------------------------
-
 import asyncio
 from dataclasses import dataclass, asdict
 from typing import List, Tuple, Union
@@ -33,10 +32,10 @@ class _LoadTestMetrics:
 
     test_duration: float
     num_requests: int
-    num_data: int
+    num_queries: int
     client_requests_per_second: float
     server_requests_per_second: float
-    server_data_per_second: float
+    server_queries_per_second: float
     latency_mean: float
     latency_std: float
     latency_max: float
@@ -55,14 +54,14 @@ class _LoadTestMetrics:
     @classmethod
     def build(cls,
               timestamps: List[Tuple[float]],
-              num_data: int,
+              num_queries: int,
               client_load: float):
         """
         Parameters
         ----------
         timestamps: ``List[Tuple[float]]``
             List of start-time,end-time pairs
-        num_data: ``int``
+        num_queries: ``int``
             Total number of data items
         client_load: ``float``
             client load to apply in requests per second
@@ -73,10 +72,10 @@ class _LoadTestMetrics:
         return cls(
             test_duration=test_duration,
             num_requests=num_requests,
-            num_data=num_data,
+            num_queries=num_queries,
             client_requests_per_second=client_load,
             server_requests_per_second=int(num_requests / test_duration),
-            server_data_per_second=int(num_data / test_duration),
+            server_queries_per_second=int(num_queries / test_duration),
             latency_mean=round(np.mean(latencies), 7),
             latency_std=round(np.std(latencies), 7),
             latency_max=round(max(latencies), 7),
@@ -91,11 +90,11 @@ class _LoadTestMetrics:
 class LoadTestMetrics:
 
     num_requests: int
-    num_data: int
+    num_queries: int
     test_duration_seconds: float
     client_requests_per_second: float
     server_requests_per_second: float
-    server_data_per_second: float
+    server_queries_per_second: float
     server_mean_latency_seconds: float
 
     def dict(self):
@@ -108,14 +107,14 @@ class LoadTestMetrics:
     @classmethod
     def build(cls,
               timestamps: List[Tuple[float]],
-              num_data: int,
+              num_queries: int,
               client_load: float):
         """
         Parameters
         ----------
         timestamps: ``List[Tuple[float]]``
             List of start-time,end-time pairs
-        num_data: ``int``
+        num_queries: ``int``
             Total number of data items
         client_load: ``float``
             client load to apply in requests per second
@@ -125,10 +124,10 @@ class LoadTestMetrics:
         return cls(
             test_duration_seconds=test_duration,
             num_requests=num_requests,
-            num_data=num_data,
+            num_queries=num_queries,
             client_requests_per_second=client_load,
             server_requests_per_second=int(num_requests / test_duration),
-            server_data_per_second=int(num_data / test_duration),
+            server_queries_per_second=int(num_queries / test_duration),
             server_mean_latency_seconds=round(test_duration / num_requests, 5),
         )
 

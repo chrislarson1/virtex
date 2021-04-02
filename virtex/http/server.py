@@ -17,7 +17,6 @@
 import asyncio
 
 import orjson as json
-from typing_extensions import Literal
 
 from virtex.core.logging import LOGGER
 from virtex.core.task import Task
@@ -25,6 +24,7 @@ from virtex.core.state_machine import VirtexStateMachine
 from virtex.core.profile import profile
 from virtex.http.message import HttpMessage
 from virtex.inference import RequestHandler
+from virtex.core.timing import async_now
 
 
 __all__ = ['http_server']
@@ -55,20 +55,27 @@ def make_body(response):
             'body': response.json}
 
 
-async def _send(send, status, response):
-    await send(make_header(status))
-    await send(make_body(response))
-
-
 def app(state_machine: VirtexStateMachine):
+
+    async def _send(send, status, response,
+                    start_t=None, num_queries=None):
+        await send(make_header(status))
+        await send(make_body(response))
+        if start_t and num_queries:
+            latency = async_now(state_machine.loop) - start_t
+            state_machine.prom_client.observe(
+                'server_rps', value=1000 * (1 / latency))
+            state_machine.prom_client.observe(
+                'server_qps', value=1000 * (num_queries / latency))
 
     def _app():
         """ASGI3 compliant wrapper"""
-        @profile(state_machine.metrics_client.observe,
+        @profile(state_machine.prom_client.observe,
                  'server_latency',
                  tstamp_fn=lambda t0, t1: t1 - t0,
                  loop=state_machine.loop)
         async def request_handler(scope, receive, send):
+            start_t = async_now(state_machine.loop)
             state_machine.check_running()
             if scope['type'] != 'http':
                 await _send(send, 403, HttpMessage(
@@ -77,6 +84,9 @@ def app(state_machine: VirtexStateMachine):
             try:
                 body = await read_body(receive)
                 request = HttpMessage(**body)
+                state_machine.prom_client.add('requests_total', 1)
+                state_machine.prom_client.add('queries_total', len(request.data))
+                state_machine.prom_client.observe('queries_per_request', len(request.data))
             except Exception as e:
                 msg = f"HttpServer caught exception: {str(e)}"
                 LOGGER.exception(msg=msg)
@@ -88,8 +98,11 @@ def app(state_machine: VirtexStateMachine):
                     task = Task(item=item)
                     state_machine.input_queue.put(task)
                     tasks.append(state_machine.poll_output_queue(task.key))
-                await _send(send, 200, HttpMessage(
-                    data=await asyncio.gather(*tasks)))
+                await _send(send=send,
+                            status=200,
+                            response=HttpMessage(data=await asyncio.gather(*tasks)),
+                            num_queries=len(tasks),
+                            start_t=start_t)
                 return
             except Exception as e:
                 msg = f"HttpServer caught exception: {str(e)}"
@@ -105,10 +118,10 @@ def http_server(name: str,
                 handler: RequestHandler,
                 max_batch_size: int = 512,
                 max_time_on_queue: float = 0.005,
-                metrics_host: str = '127.0.0.1',
-                metrics_port: int = 9090,
-                metrics_mode: Literal['push', 'scrape', 'off'] = 'off',
-                metrics_interval: float = 0.01):
+                prom_host: str = 'http://127.0.0.1',
+                prom_port: int = 9090,
+                prom_mode: str = 'off',
+                prom_push_interval: float = 0.01):
     """
     Returns a web server that implements the computation handler
 
@@ -123,16 +136,19 @@ def http_server(name: str,
     max_time_on_queue : ``Optional[float]``
         Maximum time that items spend on processing
         queue (seconds). Can be fractional.
-    metrics_host: ``str``
-    metrics_port: ``int``
-    metrics_mode: ``str``
-    metrics_interval: ``float``
+    prom_host: ``str``
+    prom_port: ``int``
+    prom_mode: ``str``
+        "off": no metrics collection
+        "scrape": prometheus scrape
+        "push": prometheus pushgateway
+    prom_push_interval: ``float``
     """
     return app(VirtexStateMachine(name,
                                   handler,
                                   max_batch_size,
                                   max_time_on_queue,
-                                  metrics_host,
-                                  metrics_port,
-                                  metrics_mode,
-                                  metrics_interval))
+                                  prom_host,
+                                  prom_port,
+                                  prom_mode,
+                                  prom_push_interval))

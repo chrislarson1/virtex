@@ -17,8 +17,6 @@
 import asyncio
 from typing import Any
 
-from typing_extensions import Literal
-
 from virtex.inference import RequestHandler
 from virtex.core.timing import async_now
 from virtex.core.profile import profile
@@ -41,10 +39,10 @@ class VirtexStateMachine(EventLoopContext):
                  handler: RequestHandler,
                  max_batch_size: int,
                  max_time_on_queue: float,
-                 metrics_host: str,
-                 metrics_port: int,
-                 metrics_mode: Literal['push', 'scrape', 'off'],
-                 metrics_interval: float):
+                 prom_host: str,
+                 prom_port: int,
+                 prom_mode: str,
+                 prom_push_interval: float):
         """
         Parameters
         ----------
@@ -57,14 +55,13 @@ class VirtexStateMachine(EventLoopContext):
         max_time_on_queue : ``float``, optional
             Maximum time that items spend on
             processing queue (seconds)
-        metrics_host: str default = '127.0.0.1'
-            Prometheus metrics URL or gateway host
-        metrics_port: ``int``
-        metrics_mode: ``str``
-        metrics_interval: ``float``
+        prom_host: ``str``
+        prom_port: ``int``
+        prom_mode: ``str``
+        prom_push_interval: ``float``
             Metrics push interval (seconds)
         """
-        if metrics_mode not in ('scrape', 'push', 'off'):
+        if prom_mode not in ('scrape', 'push', 'off'):
             raise ValueError(
                 "metrics_mode must be set to 'scrape' or 'push' or 'off'.")
         super().__init__()
@@ -73,12 +70,12 @@ class VirtexStateMachine(EventLoopContext):
         self.handler = handler
         self.input_queue = RequestQueue(max_batch_size)
         self.output_queue = ResponseQueue()
-        self.metrics_client = PROM_CLIENT[metrics_mode](
+        self.prom_client = PROM_CLIENT[prom_mode](
             name,
-            metrics_host,
-            metrics_port,
-            metrics_interval,
-            loop=self.loop)
+            prom_host,
+            prom_port,
+            self.loop,
+            prom_push_interval)
         self._running = False
 
     def check_running(self):
@@ -87,7 +84,7 @@ class VirtexStateMachine(EventLoopContext):
             self._running = True
 
     async def _process_request(self, items: list):
-        @profile(self.metrics_client.observe,
+        @profile(self.prom_client.observe,
                  'process_request_latency',
                  tstamp_fn=lambda t0, t1: t1 - t0)
         def execute():
@@ -95,7 +92,7 @@ class VirtexStateMachine(EventLoopContext):
         return execute()
 
     async def _run_inference(self, batch: Any):
-        @profile(self.metrics_client.observe,
+        @profile(self.prom_client.observe,
                  'run_inference_latency',
                  tstamp_fn=lambda t0, t1: t1 - t0)
         def execute():
@@ -103,7 +100,7 @@ class VirtexStateMachine(EventLoopContext):
         return execute()
 
     async def _process_response(self, result) -> Any:
-        @profile(self.metrics_client.observe,
+        @profile(self.prom_client.observe,
                  'process_response_latency',
                  tstamp_fn=lambda t0, t1: t1 - t0)
         def execute():
@@ -112,7 +109,7 @@ class VirtexStateMachine(EventLoopContext):
 
     async def __process(self):
         tasks = self.input_queue.pull()
-        self.metrics_client.observe('batch_size', len(tasks))
+        self.prom_client.observe('inference_batch_size', len(tasks))
         inputs = asyncio.ensure_future(
             self._process_request([task.item for task in tasks]))
         outputs = asyncio.ensure_future(
@@ -124,8 +121,8 @@ class VirtexStateMachine(EventLoopContext):
                 self._process_response(result))))
         for key, future in resp_futures:
             self.output_queue.update({key: await future})
-        self.metrics_client.observe('response_queue_size',
-                                    self.output_queue.qsize())
+        self.prom_client.observe('response_queue_size',
+                                 self.output_queue.qsize())
 
     async def __poll_input_queue(self):
         size: int
@@ -139,8 +136,8 @@ class VirtexStateMachine(EventLoopContext):
                 < self._max_time_on_queue
             if size and (full or not wait):
                 time = async_now(self.loop)
-                self.metrics_client.observe(
-                    'task_queue_size', size)
+                self.prom_client.observe(
+                    'request_queue_size', size)
                 await self.__process()
             else:
                 await self.sleep()
